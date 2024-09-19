@@ -62,27 +62,54 @@ __global__ void free_world(Primitive **d_list, Primitive **d_world, Camera **d_c
     delete *d_camera;
 }
 
+int calculate_optimal_threads_per_block() {
+    // Get device properties
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, 0);  // Assuming you're using device 0
+
+    // Maximum threads per block allowed by the hardware
+    int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;
+
+    // Threads per warp is always 32
+    int warpSize = deviceProp.warpSize;
+
+    // Choose optimal block size as a multiple of warp size, not exceeding maxThreadsPerBlock
+    int optimalThreadsPerBlock = maxThreadsPerBlock;
+
+    // Adjust threads per block if necessary
+    if (optimalThreadsPerBlock % warpSize != 0) {
+        optimalThreadsPerBlock = (optimalThreadsPerBlock / warpSize) * warpSize;
+    }
+
+    return optimalThreadsPerBlock;
+}
+
 int main() {
-    int threads_per_block_x = 32;
-    int threads_per_block_y = 32;
-    int samples_per_pixel = 500;
+    int threads_per_block = calculate_optimal_threads_per_block();
+    int threads_per_block_x = sqrt(threads_per_block);
+    int threads_per_block_y = threads_per_block / threads_per_block_x;
+    int samples_per_pixel = 100;
 
     std::cout << "Rendering image using CUDA\n";
+    printf("Using threads per block (x,y): (%d,%d)", threads_per_block_x, threads_per_block_y);
 
     int num_pixels = X * Y;
     size_t framebuffer_size = num_pixels * sizeof(Color);
 
     Color *framebuffer;
     checkCudaErrors(cudaMallocManaged((void **)&framebuffer, framebuffer_size));
+    std::cout << "Allocated framebuffer";
 
     curandState *d_rand_state;
     checkCudaErrors(cudaMalloc((void **)&d_rand_state, num_pixels * sizeof(curandState)));
     curandState *d_rand_state2;
     checkCudaErrors(cudaMalloc((void **)&d_rand_state2, sizeof(curandState)));
+    std::cout << "Allocated rand state";
 
     rand_init<<<1, 1>>>(d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+    std::cout << "Initialized rand state 2";
 
     Primitive **d_list;
     int num_primitives = 22*22+1+3;
@@ -94,6 +121,7 @@ int main() {
     create_world<<<1, 1>>>(d_list, d_world, d_camera, X, Y, d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+    std::cout << "Initialized primitives, camera, and world";
 
     clock_t start, stop;
     start = clock();

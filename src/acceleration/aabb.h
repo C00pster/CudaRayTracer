@@ -19,8 +19,9 @@ class AABB {
                              fmaxf(box1.maximum.z(), box2.maximum.z()));
         }
 
-        __device__ const float[2] axis_interval(int n) {
-            return {minimum[n], maximum[n]};
+        __device__ void axis_interval(int n, float& min, float& max) const {
+            min = minimum[n];
+            max = maximum[n];
         }
 
         __device__ bool hit(const Ray& r, float t_min, float t_max) const {
@@ -28,21 +29,22 @@ class AABB {
             const Vec4& direction = r.direction();
 
             for (int a = 0; a < 3; a++) {
-                const float[2] interval = axis_interval(a);
+                float min, max;
+                axis_interval(a, min, max);
                 const double adinv = 1.0 / direction[a];
 
-                float t0 = (interval[0] - origin[a]) * adinv;
-                float t1 = (interval[1] - origin[a]) * adinv;
+                float t0 = (min - origin[a]) * adinv;
+                float t1 = (max - origin[a]) * adinv;
 
                 if (t0 < t1) {
-                    if (t0 > ray_t.min) ray_t.min = t0;
-                    if (t1 < ray_t.max) ray_t.max = t1;
+                    if (t0 > t_min) t_min = t0;
+                    if (t1 < t_max) t_max = t1;
                 } else {
-                    if (t1 > ray_t.min) ray_t.min = t1;
-                    if (t0 < ray_t.max) ray_t.max = t0;
+                    if (t1 > t_min) t_min = t1;
+                    if (t0 < t_max) t_max = t0;
                 }
 
-                if (ray_t.max <= ray_t.min) return false;
+                if (t_max <= t_min) return false;
             }
             return true;
         }

@@ -1,8 +1,11 @@
 NVCC = nvcc
-CFLAGS = -O3 --use_fast_math --gpu-architecture=compute_86 --gpu-code=sm_86 -I./src
+CFLAGS_COMMON = -O3 --use_fast_math -I./src
 LDFLAGS = -lassimp
 
 BUILDDIR = build
+
+CFLAGS = $(CFLAGS_COMMON) --gpu-architecture=compute_86 --gpu-code=sm_86
+CFLAGS_LAPTOP = $(CFLAGS_COMMON) --gpu-architecture=compute_75 --gpu-code=sm_75
 
 TARGET = RayTracer
 SRCS = src/main.cu
@@ -15,7 +18,10 @@ $(TARGET): $(OBJS)
 $(BUILDDIR)/%.o: src/%.cu
 	$(NVCC) $(CFLAGS) -c $< -o $@
 
-.PHONY: clean
+.PHONY: clean laptop
+
+laptop: CFLAGS = $(CFLAGS_LAPTOP)
+laptop: $(TARGET)
 
 clean:
 	rm -f $(OBJS) $(TARGET)

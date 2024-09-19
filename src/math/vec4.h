@@ -36,6 +36,22 @@ class Vec4 {
         __host__ __device__ inline Vec4& operator*=(const float t);
         __host__ __device__ inline Vec4& operator/=(const float t);
 
+        // Careful, there is no catch for out of bounds access
+        __host__ __device__ inline float operator[](int i) const {
+            return i == 0 ? e.x
+                 : i == 1 ? e.y
+                 : i == 2 ? e.z
+                 : e.w;
+        }
+
+        // Careful, there is no catch for out of bounds access
+        __host__ __device__ inline float& operator[](int i) {
+            return i == 0 ? e.x
+                 : i == 1 ? e.y
+                 : i == 2 ? e.z
+                 : e.w;
+        }
+
         // Magnitude
         __host__ __device__ inline float length() const { return sqrtf(e.x*e.x + e.y*e.y + e.z*e.z); }
         __host__ __device__ inline float squared_length() const { return e.x*e.x + e.y*e.y + e.z*e.z; }
