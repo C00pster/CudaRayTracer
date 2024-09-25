@@ -16,21 +16,19 @@ __device__ Vec4 color(const Ray& r, Primitive **world, curandState *local_rand_s
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
             Ray scattered;
             Vec4 attenuation;
-            if (!rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state)) {
-                return Vec4(0, 0, 0);
-            } else {
+            if (rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state)) {
                 cur_attenuation *= attenuation;
                 cur_ray = scattered;
-            }
+            } else return Color(0.0f, 0.0f, 0.0f);
         } else {
             Vec4 unit_direction = unit_vector(cur_ray.direction());
             float t = 0.5f * (unit_direction.y() + 1.0f);
-            Vec4 color = (1.0f - t) * Vec4(1.0f, 1.0f, 1.0f) + t * Vec4(0.5f, 0.7f, 1.0f);
+            Color color = (1.0f - t) * Vec4(1.0f, 1.0f, 1.0f) + t * Vec4(0.5f, 0.7f, 1.0f);
             return cur_attenuation * color;
         }
     }
 
-    return Vec4(0, 0, 0); // Exceeded recursion
+    return Color(1.0f, 0.0f, 0.0f); // Exceeded recursion
 }
 
 __global__ void render_init(int width, int height, curandState *rand_state) {
@@ -43,7 +41,7 @@ __global__ void render_init(int width, int height, curandState *rand_state) {
 }
 
 __global__ void render(Color *framebuffer, int width, int height, int ns, Camera **cam, 
-                       Primitive **world, curandState *rand_state) {
+                       Primitive** world, curandState *rand_state) {
     // Thread coordinates
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;

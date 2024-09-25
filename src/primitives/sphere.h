@@ -22,9 +22,36 @@ class Sphere : public Primitive {
             bbox = AABB(box1, box2);
         }
 
-        __device__ virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const;
+        __device__ 
+        virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const {
+            Point3 current_center = center.at(r.time());
+            Vec4 oc = current_center - r.origin();
+            float a = r.direction().squared_length();
+            float b = dot(r.direction(), oc);
+            float c = oc.squared_length() - radius*radius;
+            float discriminant = b*b - a*c;
 
-        __device__ virtual bool bounding_box(AABB& bounding_box) const override { 
+            if (discriminant < 0.0f) return false;
+
+            float root = (b - sqrt(discriminant)) / a;
+
+            if (!surrounds(root, t_min, t_max)) {
+                root = (b + sqrt(discriminant)) / a;
+                if (!surrounds(root, t_min, t_max)) return false;
+            }
+
+            rec.t = root;
+            rec.p = r.at(rec.t);
+            Vec4 outward_normal = (rec.p - current_center) / radius;
+            rec.set_face_normal(r, outward_normal);
+            get_sphere_uv(outward_normal, rec.u, rec.v);
+            rec.mat_ptr = mat_ptr;
+
+            return true;
+        }
+
+        __device__ 
+        virtual bool bounding_box(AABB& bounding_box) const override { 
             bounding_box = bbox; 
             return true; 
         }
@@ -33,32 +60,15 @@ class Sphere : public Primitive {
         float radius;
         Material *mat_ptr;
         AABB bbox;
+
+        private:
+            __device__
+            static void get_sphere_uv(const Vec4& p, float& u, float& v) {
+                float phi = atan2(p.z(), p.x());
+                float theta = asin(p.y());
+                u = 1 - (phi + M_PI) / (2*M_PI);
+                v = (theta + M_PI/2) / M_PI;
+            }
 };
-
-__device__ bool Sphere::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const {
-    Point3 current_center = center.at(r.time());
-    Vec4 oc = current_center - r.origin();
-    float a = r.direction().squared_length();
-    float b = dot(r.direction(), oc);
-    float c = oc.squared_length() - radius*radius;
-    float discriminant = b*b - a*c;
-
-    if (discriminant < 0) return false;
-
-    float root = (b - sqrt(discriminant)) / a;
-
-    if (!surrounds(root, t_min, t_max)) {
-        root = (b + sqrt(discriminant)) / a;
-        if (!surrounds(root, t_min, t_max)) return false;
-    }
-
-    rec.t = root;
-    rec.p = r.at(rec.t);
-    Vec4 outward_normal = (rec.p - current_center) / radius;
-    rec.set_face_normal(r, outward_normal);
-    rec.mat_ptr = mat_ptr;
-
-    return true;
-}
 
 #endif // SPHERE_H

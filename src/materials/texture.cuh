@@ -1,0 +1,38 @@
+#ifndef TEXTURE_CUH
+#define TEXTURE_CUH
+
+#include "math/vec4.h"
+
+class Texture {
+    public:
+        __device__ virtual Vec4 value(float u, float v, const Vec4 &p) const = 0;
+};
+
+class ConstantTexture : public Texture {
+    public:
+        __device__ ConstantTexture() {}
+        __device__ ConstantTexture(const Vec4 &c) : color(c) {}
+        __device__ virtual Vec4 value(float u, float v, const Vec4 &p) const {
+            return color;
+        }
+
+        Vec4 color;
+};
+
+class CheckerTexture : public Texture {
+    public:
+        __device__ CheckerTexture() {}
+        __device__ CheckerTexture(Texture *t0, Texture *t1) : even(t0), odd(t1) {}
+        __device__ virtual Vec4 value(float u, float v, const Vec4 &p) const {
+            float sines = sin(10*p.x()) * sin(10*p.y()) * sin(10*p.z());
+            if (sines < 0)
+                return odd->value(u, v, p);
+            else
+                return even->value(u, v, p);
+        }
+
+        Texture *even;
+        Texture *odd;
+};
+
+#endif // TEXTURE_CUH

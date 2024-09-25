@@ -5,6 +5,7 @@ struct HitRecord;
 
 #include "math/ray.h"
 #include "primitives/primitive.h"
+#include "texture.cuh"
 
 __device__ float schlick(float cosine, float ref_idx) {
     float r0 = (1 - ref_idx) / (1 + ref_idx);
@@ -41,18 +42,26 @@ __device__ bool reflect(const Vec4 &v, const Vec4 &n, Vec4 &reflected) {
 
 class Material {
     public:
-        __device__ virtual bool scatter(const Ray &r_in, const HitRecord &rec, Vec4 &attenuation, Ray &scattered, curandState *local_rand_state) const = 0;
+        __device__ 
+        virtual bool scatter(const Ray &r_in, const HitRecord &rec, Color &attenuation, Ray &scattered, curandState *local_rand_state) const = 0;
 };
 
 class Lambertian : public Material {
     public:
-        Vec4 albedo;
+        Texture* albedo;
 
-        __device__ Lambertian(const Vec4 &a) : albedo(a) {}
-        __device__ virtual bool scatter(const Ray &r_in, const HitRecord &rec, Vec4 &attenuation, Ray &scattered, curandState *local_rand_state) const {
-            Vec4 target = rec.p + rec.normal + random_in_unit_sphere(local_rand_state);
-            scattered = Ray(rec.p, target - rec.p, r_in.time());
-            attenuation = albedo;
+        __host__ __device__ 
+        Lambertian(Texture* a) : albedo(a) {}
+
+        __device__ 
+        virtual bool scatter(const Ray &r_in, const HitRecord &rec, Vec4 &attenuation, Ray &scattered, curandState *local_rand_state) const {
+            Vec4 scatter_direction = rec.normal + random_in_unit_sphere(local_rand_state);
+
+            if (scatter_direction.near_zero()) scatter_direction = rec.normal;
+
+            scattered = Ray(rec.p, scatter_direction, r_in.time());
+            attenuation = albedo->value(0, 0, rec.p);
+
             return true;
         }
 };
@@ -62,17 +71,20 @@ class Metal : public Material {
         Vec4 albedo;
         float fuzz;
 
-        __device__ Metal(const Vec4 &a, float f) : albedo(a) {
+        __host__ __device__ 
+        Metal(const Vec4 &a, float f) : albedo(a) {
             if (f < 1) fuzz = f;
             else fuzz = 1;
         }
-        __device__ virtual bool scatter(const Ray &r_in, const HitRecord &rec, Vec4 &attenuation, Ray &scattered, curandState *local_rand_state) const {
+
+        __device__ 
+        virtual bool scatter(const Ray &r_in, const HitRecord &rec, Vec4 &attenuation, Ray &scattered, curandState *local_rand_state) const {
             Vec4 reflected;
             reflect(unit_vector(r_in.direction()), rec.normal, reflected);
-            reflected + fuzz * random_in_unit_sphere(local_rand_state);
+            reflected += (fuzz * random_in_unit_sphere(local_rand_state));
             scattered = Ray(rec.p, reflected, r_in.time());
             attenuation = albedo;
-            return (dot(scattered.direction(), rec.normal) > 0);
+            return (dot(scattered.direction(), rec.normal) > 0.0f);
         }
 };
 
@@ -80,14 +92,17 @@ class Dielectric : public Material {
     public:
         float ref_idx;
 
-        __device__ Dielectric(float ri) : ref_idx(ri) {}
-        __device__ virtual bool scatter(const Ray &r_in, const HitRecord &rec, Vec4 &attenuation, Ray &scattered, curandState *local_rand_state) const {
+        __host__ __device__ 
+        Dielectric(float ri) : ref_idx(ri) {}
+
+        __device__ 
+        virtual bool scatter(const Ray &r_in, const HitRecord &rec, Vec4 &attenuation, Ray &scattered, curandState *local_rand_state) const {
             Vec4 outward_normal;
             Vec4 reflected;
             
             reflect(unit_vector(r_in.direction()), rec.normal, reflected);
             float ni_over_nt;
-            attenuation = Vec4(1.0, 1.0, 1.0); // No attenuation for dielectric
+            attenuation = Color(1.0f, 1.0f, 1.0f); // No attenuation for dielectric
             Vec4 refracted;
             float reflect_prob;
             float cosine;
@@ -107,9 +122,9 @@ class Dielectric : public Material {
             else reflect_prob = 1.0;
 
             if (curand_uniform(local_rand_state) < reflect_prob) {
-                scattered = Ray(rec.p, reflected);
+                scattered = Ray(rec.p, reflected, r_in.time());
             } else {
-                scattered = Ray(rec.p, refracted);
+                scattered = Ray(rec.p, refracted, r_in.time());
             }
 
             return true;

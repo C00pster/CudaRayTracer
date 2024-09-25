@@ -64,6 +64,12 @@ class Vec4 {
             e.z = sqrt(e.z);
             return *this;
         }
+
+        __host__ __device__
+        inline bool near_zero() const {
+            const float s = 1e-8;
+            return (fabs(e.x) < s) && (fabs(e.y) < s) && (fabs(e.z) < s);
+        }
 };
 
 using Point3 = Vec4; // Alias for 3D point

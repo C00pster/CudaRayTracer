@@ -1,16 +1,21 @@
 #ifndef AABB_H
 #define AABB_H
 
-#include "math/ray.h"
+#include "math/math.cuh"
 
 class AABB {
     public:
         Point3 minimum;
         Point3 maximum;
 
-        __device__ AABB() {}
-        __device__ AABB(const Point3& a, const Point3& b) : minimum(a), maximum(b) {}
-        __device__ AABB(const AABB& box1, const AABB& box2) {
+        __host__ __device__ 
+        AABB() {}
+
+        __host__ __device__ 
+        AABB(const Point3& a, const Point3& b) : minimum(a), maximum(b) {}
+
+        __host__ __device__ 
+        AABB(const AABB& box1, const AABB& box2) {
             minimum = Point3(fminf(box1.minimum.x(), box2.minimum.x()),
                              fminf(box1.minimum.y(), box2.minimum.y()),
                              fminf(box1.minimum.z(), box2.minimum.z()));
