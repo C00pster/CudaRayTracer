@@ -3,9 +3,10 @@
 
 #include "math/ray.h"
 #include "primitives/primitive.h"
+#include "primitives/world.h"
 #include <curand_kernel.h>
 
-__device__ Vec4 color(const Ray& r, Primitive **world, curandState *local_rand_state) {
+__device__ Vec4 color(const Ray& r, World** world, curandState *local_rand_state) {
     Ray cur_ray = r;
     Vec4 cur_attenuation = Vec4(1.0f, 1.0f, 1.0f);
 
@@ -28,7 +29,7 @@ __device__ Vec4 color(const Ray& r, Primitive **world, curandState *local_rand_s
         }
     }
 
-    return Color(1.0f, 0.0f, 0.0f); // Exceeded recursion
+    return Color(0.0f, 0.0f, 0.0f); // Exceeded recursion
 }
 
 __global__ void render_init(int width, int height, curandState *rand_state) {
@@ -41,7 +42,7 @@ __global__ void render_init(int width, int height, curandState *rand_state) {
 }
 
 __global__ void render(Color *framebuffer, int width, int height, int ns, Camera **cam, 
-                       Primitive** world, curandState *rand_state) {
+                       World** world, curandState *rand_state) {
     // Thread coordinates
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;

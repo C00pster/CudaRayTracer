@@ -56,6 +56,11 @@ class Sphere : public Primitive {
             return true; 
         }
 
+        __device__
+        virtual Point3 get_centroid() const override {
+            return center.at(0.5f);
+        }
+
         Ray center;
         float radius;
         Material *mat_ptr;
