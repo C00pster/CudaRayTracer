@@ -1,93 +1,95 @@
 #ifndef SCENE_H
 #define SCENE_H
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 #include <vector>
 #include <string>
 #include <iostream>
 #include "math/vec4.h"
+#include "cuda/cuda_utils.h"
 
-class Scene {
-    public:
-        struct Vertex {
-            Vec4 position;
-            Vec4 normal;
-            float texCoord[2];
-        };
+__global__
+void checkered_spheres_device(Primitive **d_list, Primitive **d_sorted_list, World **d_world, int64_t* morton_codes, int64_t* sorted_morton_codes,
+                  Camera **d_camera, int width, int height, curandState *rand_state) {
+    if (threadIdx.x != 0 || blockIdx.x != 0) return;
 
-        Scene(const std::string& filename) {
-            loadObjFile(filename);
-        }
+    Texture* checker = new CheckerTexture(
+        0.32f, 
+        Color(0.2f, 0.3f, 0.1f),
+        Color(0.9f, 0.9f, 0.9f)
+    );
+    int counter = 0;
+    d_list[counter++] = new Sphere(Vec4(0, -10, 0), 10, new Lambertian(checker));
+    d_list[counter++] = new Sphere(Vec4(0, 10, 0), 10, new Lambertian(checker));
 
-        const std::vector<Vertex>& getVertices() const {
-            return vertices;
-        }
+    *d_camera = new Camera(Vec4(13, 2, 3), Vec4(0, 0, 0), Vec4(0, 1, 0), 30.0f, float(width)/float(height), 0.1f, 10.0f);
 
-        const std::vector<unsigned int>& getIndices() const {
-            return indices;
-        }
+    *d_world = new World(d_list, d_sorted_list, 2, morton_codes, sorted_morton_codes);
+}
 
-    private:
-        std::vector<Vertex> vertices;
-        std::vector<unsigned int> indices;
+__global__
+void bouncing_spheres_device(Primitive **d_list, Primitive **d_sorted_list, World **d_world, int64_t* morton_codes, int64_t* sorted_morton_codes,
+                  Camera **d_camera, int width, int height, curandState *rand_state) {
+    if (threadIdx.x != 0 || blockIdx.x != 0) return;
+    int num_primitives = 4;
+    
+    Texture *checker = new CheckerTexture(
+        0.4f,
+        new ConstantTexture(Vec4(0.2f, 0.3f, 0.1f)),
+        new ConstantTexture(Vec4(0.9f, 0.9f, 0.9f))
+    );
 
-        void loadObjFile(const std::string& filename) {
-            Assimp::Importer importer;
+    int counter = 0;
+    d_list[counter++] = new Sphere(Vec4(0, -1000, 0), 1000, new Lambertian(checker));
+    d_list[counter++] = new Sphere(Vec4(0, 1, 0), 1.0f, new Dielectric(1.5f));
+    d_list[counter++] = new Sphere(Vec4(-4, 1, 0), 1.0f, 
+                    new Lambertian(
+                        new ConstantTexture(
+                            Vec4(0.4f, 0.2f, 0.1f))));
+    d_list[counter++] = new Sphere(Vec4(4, 1, 0), 1.0f, new Metal(Vec4(0.7f, 0.6f, 0.5f), 0.0f));
 
-            const aiScene* scene = importer.ReadFile(filename, 
-                aiProcess_Triangulate | 
-                aiProcess_FlipUVs |
-                aiProcess_JoinIdenticalVertices |
-                aiProcess_GenNormals);
+    *d_camera = new Camera(Vec4(13, 2, 3), Vec4(0, 0, 0), Vec4(0, 1, 0), 30.0f, float(width)/float(height), 0.1f, 10.0f);
 
-            if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-                std::cerr << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
-                return;
-            }
+    *d_world = new World(d_list, d_sorted_list, num_primitives, morton_codes, sorted_morton_codes);
+}
 
-            aiMesh* mesh = scene->mMeshes[0];
-            processMesh(mesh);
-        }
+__host__
+void create_scene(World** d_world, Camera** d_camera, curandState *rand_state, int X, int Y, int scene) {
+    int num_primitives;
+    Primitive **d_list;
+    Primitive **d_sorted_list;
+    int64_t *morton_codes;
+    int64_t *sorted_morton_codes;
 
-        void processMesh(aiMesh* mesh) {
-            for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-                Vertex vertex;
+    switch(scene) {
+        case 1:
+            num_primitives = 4;
+            break;
+        case 2:
+            num_primitives = 2;
+            break;
+        default:
+            std::cerr << "Invalid scene number" << std::endl;
+            exit(1);
+    }
+    checkCudaErrors(cudaMalloc((void **)&d_list, num_primitives * sizeof(Primitive *)));
+    checkCudaErrors(cudaMalloc((void **)&d_sorted_list, (num_primitives * 2 - 1) * sizeof(Primitive *)));
+    checkCudaErrors(cudaMalloc((void **)&morton_codes, num_primitives * sizeof(int64_t)));
+    checkCudaErrors(cudaMalloc((void **)&sorted_morton_codes, num_primitives * sizeof(int64_t)));
 
-                //Position
-                vertext.position = Vec4(mesh->mVertices[i].x,
-                                        mesh->mVertices[i].y,
-                                        mesh->mVertices[i].z,
-                                        0.0f);
+    switch(scene) {
+        case 1:      
+            bouncing_spheres_device<<<1, 1>>>(d_list, d_sorted_list, d_world, morton_codes, sorted_morton_codes, d_camera, X, Y, rand_state);
+            break;
+        case 2:
+            checkered_spheres_device<<<1, 1>>>(d_list, d_sorted_list, d_world, morton_codes, sorted_morton_codes, d_camera, X, Y, rand_state);
+            break;
+        default:
+            std::cerr << "Invalid scene number" << std::endl;
+            exit(1);
+    }
 
-                //Normal
-                if (mesh->HasNormals()) {
-                    vertex.normal = Vec4(mesh->mNormals[i].x,
-                                         mesh->mNormals[i].y,
-                                         mesh->mNormals[i].z,
-                                         1.0f);
-                }
-
-                //Texture coordinates
-                if (mesh->HasTextureCoords(0)) {
-                    vertex.texCoord[0] = mesh->mTextureCoords[0][i].x;
-                    vertex.texCoord[1] = mesh->mTextureCoords[0][i].y;
-                } else {
-                    vertex.texCoord[0] = 0.0f;
-                    vertex.texCoord[1] = 0.0f;
-                }
-
-                vertices.push_back(vertex);
-            }
-
-            for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-                aiFace face = mesh->mFaces[i];
-                for (unsigned int j = 0; j < face.mNumIndices; j++) {
-                    indices.push_back(face.mIndices[j]);
-                }
-            }
-        }
-};
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+}
 
 #endif // SCENE_H
