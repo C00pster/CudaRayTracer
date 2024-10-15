@@ -1,5 +1,5 @@
 NVCC = nvcc
-CFLAGS_COMMON = --use_fast_math -I./src -O3
+CFLAGS_COMMON = -rdc=true --use_fast_math -I./src -O0 -g -G
 LDFLAGS = -lassimp
 
 BUILDDIR = build

@@ -2,6 +2,8 @@
 #define TEXTURE_CUH
 
 #include "math/vec4.h"
+#include "rtw_image.h"
+#include "math/interval.h"
 
 class Texture {
     public:
@@ -54,6 +56,47 @@ class CheckerTexture : public Texture {
         float inv_scale;
         Texture *even;
         Texture *odd;
+};
+
+class ImageTexture : public Texture {
+    public:
+        DeviceImage img;
+
+        __device__
+        ImageTexture(const DeviceImage& image) {
+            img = image;
+        }
+
+        __device__
+        Color value(float u, float v, const Point3& p) const override {
+            if (img.data == nullptr) {
+                return Color(0, 1, 1);
+            }
+
+            u = fmodf(u, 1.0f);
+            v = fmodf(v, 1.0f);
+            if (u < 0.0f) u += 1.0f;
+            if (v < 0.0f) v += 1.0f;
+
+            int i = static_cast<int>(u * img.width);
+            int j = static_cast<int>((1.0f - v) * (img.height - 0.001f));
+
+            i = i < 0 ? 0 : (i >= img.width ? img.width - 1 : i);
+            j = j < 0 ? 0 : (j >= img.height ? img.height - 1 : j);
+
+            int idx = (j * img.width + i) * img.channels;
+
+            int max_idx = img.width * img.height * img.channels;
+            if (idx < 0 || idx >= max_idx) {
+                return Color(0, 1, 1);
+            }
+
+            float r = static_cast<float>(img.data[idx]) / 255.0f;
+            float g = static_cast<float>(img.data[idx + 1]) / 255.0f;
+            float b = static_cast<float>(img.data[idx + 2]) / 255.0f;
+
+            return Color(r, g, b);
+        }
 };
 
 #endif // TEXTURE_CUH

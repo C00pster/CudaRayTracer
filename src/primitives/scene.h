@@ -52,6 +52,21 @@ void bouncing_spheres_device(Primitive **d_list, Primitive **d_sorted_list, Worl
     *d_world = new World(d_list, d_sorted_list, num_primitives, morton_codes, sorted_morton_codes);
 }
 
+__global__
+void globe_device(Primitive **d_list, Primitive **d_sorted_list, DeviceImage* img, World **d_world, int64_t* morton_codes, int64_t* sorted_morton_codes,
+                  Camera **d_camera, int width, int height, curandState *rand_state) {
+    if (threadIdx.x != 0 || blockIdx.x != 0) return;
+    int num_primitives = 1;
+
+    ImageTexture* img_texture = new ImageTexture(*img);
+
+    d_list[0] = new Sphere(Vec4(0, 0, 0), 2.0f, new Lambertian(img_texture));
+
+    *d_camera = new Camera(Vec4(13, 2, 3), Vec4(0, 0, 0), Vec4(0, 1, 0), 30.0f, float(width)/float(height), 0.1f, 10.0f);
+
+    *d_world = new World(d_list, d_sorted_list, num_primitives, morton_codes, sorted_morton_codes);
+}
+
 __host__
 void create_scene(World** d_world, Camera** d_camera, curandState *rand_state, int X, int Y, int scene) {
     int num_primitives;
@@ -66,6 +81,9 @@ void create_scene(World** d_world, Camera** d_camera, curandState *rand_state, i
             break;
         case 2:
             num_primitives = 2;
+            break;
+        case 3:
+            num_primitives = 1;
             break;
         default:
             std::cerr << "Invalid scene number" << std::endl;
@@ -83,6 +101,25 @@ void create_scene(World** d_world, Camera** d_camera, curandState *rand_state, i
         case 2:
             checkered_spheres_device<<<1, 1>>>(d_list, d_sorted_list, d_world, morton_codes, sorted_morton_codes, d_camera, X, Y, rand_state);
             break;
+        case 3: {
+            RTWImage image("models/images/earthmap.jpg");
+            unsigned char* h_device_image = image.get_device_data();
+            int width = image.get_width();
+            int height = image.get_height();
+            int channels = image.get_channels();
+
+            DeviceImage* d_image;
+            cudaMalloc((void **)&d_image, sizeof(DeviceImage));
+            init_device_image<<<1, 1>>>(d_image, h_device_image, width, height, channels);
+            cudaDeviceSynchronize();
+
+            globe_device<<<1, 1>>>(d_list, d_sorted_list, d_image, d_world, morton_codes, sorted_morton_codes, d_camera, X, Y, rand_state);
+            Sphere* sphere;
+            checkCudaErrors(cudaMemcpy(&sphere, d_list, sizeof(Sphere *), cudaMemcpyDeviceToHost));
+            Lambertian* lambertian = (Lambertian *)sphere->mat_ptr;
+            ImageTexture* img_texture = (ImageTexture *)lambertian->albedo;
+            break;
+        }
         default:
             std::cerr << "Invalid scene number" << std::endl;
             exit(1);

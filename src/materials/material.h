@@ -50,7 +50,7 @@ class Lambertian : public Material {
     public:
         Texture* albedo;
 
-        __host__ __device__ 
+        __device__ 
         Lambertian(Texture* a) : albedo(a) {}
 
         __device__ 
@@ -60,8 +60,7 @@ class Lambertian : public Material {
             if (scatter_direction.near_zero()) scatter_direction = rec.normal;
 
             scattered = Ray(rec.p, scatter_direction, r_in.time());
-            attenuation = albedo->value(0, 0, rec.p);
-
+            attenuation = albedo->value(rec.u, rec.v, rec.p);
             return true;
         }
 };
@@ -71,7 +70,7 @@ class Metal : public Material {
         Vec4 albedo;
         float fuzz;
 
-        __host__ __device__ 
+        __device__ 
         Metal(const Vec4 &a, float f) : albedo(a) {
             if (f < 1) fuzz = f;
             else fuzz = 1;

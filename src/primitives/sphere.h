@@ -6,16 +6,19 @@
 
 class Sphere : public Primitive {
     public:
-        __device__ Sphere() {}
+        __host__ __device__ 
+        Sphere() {}
 
         // Stationary Sphere
-        __device__ Sphere(const Point3& static_center, float r, Material *m) : center(static_center, Vec4()), radius(fmaxf(r, 0)), mat_ptr(m) {
+        __host__ __device__ 
+        Sphere(const Point3& static_center, float r, Material *m) : center(static_center, Vec4()), radius(fmaxf(r, 0)), mat_ptr(m) {
             Vec4 rvec = Vec4(radius, radius, radius);
             bbox = AABB(static_center - rvec, static_center + rvec);
         }
 
         // Moving Sphere
-        __device__ Sphere(const Point3& center1, const Point3& center2, float r, Material *m) : center(center1, center2 - center1), radius(r), mat_ptr(m) {
+        __host__ __device__ 
+        Sphere(const Point3& center1, const Point3& center2, float r, Material *m) : center(center1, center2 - center1), radius(r), mat_ptr(m) {
             Vec4 rvec = Vec4(radius, radius, radius);
             AABB box1(center.at(0) - rvec, center.at(0) + rvec);
             AABB box2(center.at(1) - rvec, center.at(1) + rvec);
@@ -68,11 +71,12 @@ class Sphere : public Primitive {
 
         private:
             __device__
-            static void get_sphere_uv(const Vec4& p, float& u, float& v) {
-                float phi = atan2(p.z(), p.x());
-                float theta = asin(p.y());
-                u = 1 - (phi + M_PI) / (2*M_PI);
-                v = (theta + M_PI/2) / M_PI;
+            static void get_sphere_uv(const Point3& p, float& u, float& v) {
+                float theta = acos(-p.y());
+                float phi = atan2(-p.z(), p.x()) + M_PI;
+
+                u = phi / (2*M_PI);
+                v = theta / M_PI;
             }
 };
 

@@ -10,8 +10,8 @@
 #include "primitives/scene.h"
 #include <cstdint>
 
-#define X 1920
-#define Y 1080
+#define X 160
+#define Y 90
 #define RED 0
 #define GREEN 1
 #define BLUE 2
@@ -22,7 +22,7 @@ int main() {
     int threads_per_block = calculate_optimal_threads_per_block();
     int threads_per_block_x = sqrt(threads_per_block);
     int threads_per_block_y = threads_per_block / threads_per_block_x;
-    int samples_per_pixel = 1000;
+    int samples_per_pixel = 1;
     cudaDeviceSetLimit(cudaLimitStackSize, 8192);
 
     std::cout << "Creating world\n";
@@ -47,7 +47,7 @@ int main() {
     Camera **d_camera;
     checkCudaErrors(cudaMalloc((void **)&d_camera, sizeof(Camera *)));
 
-    create_scene(d_world, d_camera, d_rand_state, X, Y, 2);
+    create_scene(d_world, d_camera, d_rand_state, X, Y, 3);
     std::cout << "World created\n";
 
     clock_t start, stop;
