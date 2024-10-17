@@ -1,17 +1,12 @@
-#ifndef CAMERA_H
-#define CAMERA_H
+#ifndef CAMERA_CUH
+#define CAMERA_CUH
 
 #include <curand_kernel.h>
-#include "math/ray.h"
-#include "utils/constants.h"
+#include "math/ray.cuh"
+#include "utils/constants.cuh"
 
-__device__ Vec4 random_in_unit_disk(curandState *local_rand_state) {
-    Vec4 p;
-    do {
-        p = 2.0f*Vec4(curand_uniform(local_rand_state), curand_uniform(local_rand_state), 0) - Vec4(1, 1, 0);
-    } while (dot(p, p) >= 1.0f);
-    return p;
-}
+__device__
+Vec4 random_in_unit_disk(curandState *local_rand_state);
 
 class Camera {
     public:
@@ -44,4 +39,4 @@ class Camera {
         float lens_radius;
 };
 
-#endif // CAMERA_H
+#endif // CAMERA_CUH

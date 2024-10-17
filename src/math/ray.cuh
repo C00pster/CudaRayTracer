@@ -1,7 +1,7 @@
-#ifndef RAY_H
-#define RAY_H
+#ifndef RAY_CUH
+#define RAY_CUH
 
-#include "vec4.h"
+#include "vec4.cuh"
 
 class Ray {
     public:
@@ -32,4 +32,4 @@ class Ray {
         float tm;
 };
 
-#endif // RAY_H
+#endif // RAY_CUH

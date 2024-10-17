@@ -1,12 +1,7 @@
-#ifndef RENDERING_H
-#define RENDERING_H
+#include "rendering.cuh"
 
-#include "math/ray.h"
-#include "primitives/primitive.h"
-#include "primitives/world.h"
-#include <curand_kernel.h>
-
-__device__ Vec4 color(const Ray& r, World** world, curandState *local_rand_state) {
+__device__ 
+Vec4 color(const Ray& r, World** world, curandState *local_rand_state) {
     Ray cur_ray = r;
     Vec4 cur_attenuation = Vec4(1.0f, 1.0f, 1.0f);
 
@@ -32,7 +27,8 @@ __device__ Vec4 color(const Ray& r, World** world, curandState *local_rand_state
     return Color(0.0f, 0.0f, 0.0f); // Exceeded recursion
 }
 
-__global__ void render_init(int width, int height, curandState *rand_state) {
+__global__ 
+void render_init(int width, int height, curandState *rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= width) || (j >= height)) return;
@@ -41,7 +37,8 @@ __global__ void render_init(int width, int height, curandState *rand_state) {
     curand_init(1984+pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-__global__ void render(Color *framebuffer, int width, int height, int ns, Camera **cam, 
+__global__ 
+void render(Color *framebuffer, int width, int height, int ns, Camera **cam, 
                        World** world, curandState *rand_state) {
     // Thread coordinates
     int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -67,5 +64,3 @@ __global__ void render(Color *framebuffer, int width, int height, int ns, Camera
     col.apply_sqrt();
     framebuffer[pixel_index] = col;
 }
-
-#endif // RENDERING_H

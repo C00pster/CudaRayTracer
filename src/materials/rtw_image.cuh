@@ -1,16 +1,9 @@
-#ifndef RTW_STB_IMAGE_H
-#define RTW_STB_IMAGE_H
-
-#ifndef _MSC_VER
-    #pragma warning (push, 0)
-#endif
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_FAILURE_USERMSG
-#include "./external/stb_image.h"
+#ifndef RTW_STB_IMAGE_CUH
+#define RTW_STB_IMAGE_CUH
 
 #include <cuda_runtime.h>
 #include <iostream>
+#include "external/stb_image.h"
 
 struct DeviceImage {
     unsigned char*  data;
@@ -20,13 +13,7 @@ struct DeviceImage {
 };
 
 __global__
-void init_device_image(DeviceImage* d_img, unsigned char* data, int width, int height, int channels) {
-    if (threadIdx.x != 0 || blockIdx.x != 0) return;
-    d_img->data = data;
-    d_img->width = width;
-    d_img->height = height;
-    d_img->channels = channels;
-}
+void init_device_image(DeviceImage* d_img, unsigned char* data, int width, int height, int channels);
 
 class RTWImage {
     public:
@@ -86,8 +73,4 @@ class RTWImage {
         int             channels = 0;
 };
 
-#ifndef _MSC_VER
-    #pragma warning (pop)
-#endif
-
-#endif // RTW_STB_IMAGE_H
+#endif // RTW_STB_IMAGE_CUH

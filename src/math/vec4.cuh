@@ -1,43 +1,77 @@
-#ifndef VEC4_H
-#define VEC4_H
+#ifndef VEC4_CUH
+#define VEC4_CUH
 
-#include "utils/constants.h"
+#include "utils/constants.cuh"
+#include <iostream>
 
-// __host__ - Flag to indicate that the function is called from the host
-// __device__ - Flag to indicate that the function is called from the device
 class Vec4 {
     public:
-        // float4 is a CUDA vector type
         float4 e;
 
         //Constructors
-        __host__ __device__ Vec4() { e = make_float4(0.0f, 0.0f, 0.0f, 0.0f); }
-        __host__ __device__ Vec4(float x, float y, float z, float w) { e = make_float4(x, y, z, w); }
-        __host__ __device__ Vec4(float x, float y, float z) { e = make_float4(x, y, z, 1.0f); }
-        __host__ __device__ Vec4(const float4 &v) : e(v) {}
+        __host__ __device__
+        Vec4() { e = make_float4(0.0f, 0.0f, 0.0f, 0.0f); }
+
+        __host__ __device__
+        Vec4(float x, float y, float z, float w) { e = make_float4(x, y, z, w); }
+
+        __host__ __device__
+        Vec4(float x, float y, float z) { e = make_float4(x, y, z, 1.0f); }
+
+        __host__ __device__
+        Vec4(const float4 &v) : e(v) {}
 
         //Accessors
-        __host__ __device__ inline float x() const { return e.x; }
-        __host__ __device__ inline float y() const { return e.y; }
-        __host__ __device__ inline float z() const { return e.z; }
-        __host__ __device__ inline float w() const { return e.w; }
-        __host__ __device__ inline float r() const { return e.x; }
-        __host__ __device__ inline float g() const { return e.y; }
-        __host__ __device__ inline float b() const { return e.z; }
+        __host__ __device__ 
+        inline float x() const { return e.x; }
+
+        __host__ __device__
+        inline float y() const { return e.y; }
+
+        __host__ __device__
+        inline float z() const { return e.z; }
+
+        __host__ __device__
+        inline float w() const { return e.w; }
+
+        __host__ __device__
+        inline float r() const { return e.x; }
+
+        __host__ __device__
+        inline float g() const { return e.y; }
+
+        __host__ __device__
+        inline float b() const { return e.z; }
 
         //Operators
-        __host__ __device__ inline const Vec4& operator+() const { return *this; }
-        __host__ __device__ inline Vec4 operator-() const { return Vec4(-e.x, -e.y, -e.z, e.w); } //w stays unchanged
+        __host__ __device__ 
+        inline const Vec4& operator+() const { return *this; }
 
-        __host__ __device__ inline Vec4& operator+=(const Vec4 &v2);
-        __host__ __device__ inline Vec4& operator-=(const Vec4 &v2);
-        __host__ __device__ inline Vec4& operator*=(const Vec4 &v2);
-        __host__ __device__ inline Vec4& operator/=(const Vec4 &v2);
-        __host__ __device__ inline Vec4& operator*=(const float t);
-        __host__ __device__ inline Vec4& operator/=(const float t);
+        __host__ __device__ 
+        inline Vec4 operator-() const { return Vec4(-e.x, -e.y, -e.z, e.w); } //w stays unchanged
+
+        __host__ __device__
+        inline Vec4& operator+=(const Vec4 &v2);
+
+        __host__ __device__
+        inline Vec4& operator-=(const Vec4 &v2);
+
+        __host__ __device__
+        inline Vec4& operator*=(const Vec4 &v2);
+
+        __host__ __device__
+        inline Vec4& operator/=(const Vec4 &v2);
+
+        __host__ __device__
+        inline Vec4& operator*=(const float t);
+
+        __host__ __device__
+        inline Vec4& operator/=(const float t);
+
 
         // Careful, there is no catch for out of bounds access
-        __host__ __device__ inline float operator[](int i) const {
+        __host__ __device__
+        inline float operator[](int i) const {
             return i == 0 ? e.x
                  : i == 1 ? e.y
                  : i == 2 ? e.z
@@ -45,20 +79,34 @@ class Vec4 {
         }
 
         // Careful, there is no catch for out of bounds access
-        __host__ __device__ inline float& operator[](int i) {
+        __host__ __device__
+        inline float& operator[](int i) {
             return i == 0 ? e.x
                  : i == 1 ? e.y
                  : i == 2 ? e.z
                  : e.w;
+        }
+
+        friend std::istream& operator>>(std::istream &is, Vec4 &t) {
+            return is >> t.e.x >> t.e.y >> t.e.z;
+        }
+
+        friend std::ostream& operator<<(std::ostream &out, const Vec4 &v) {
+            return out << v.e.x << ' ' << v.e.y << ' ' << v.e.z;
         }
 
         // Magnitude
-        __host__ __device__ inline float length() const { return sqrtf(e.x*e.x + e.y*e.y + e.z*e.z); }
-        __host__ __device__ inline float squared_length() const { return e.x*e.x + e.y*e.y + e.z*e.z; }
+        __host__ __device__
+        inline float length() const { return sqrtf(e.x*e.x + e.y*e.y + e.z*e.z); }
+        __host__ __device__
+        inline float squared_length() const { return e.x*e.x + e.y*e.y + e.z*e.z; }
 
         // Normalize
-        __host__ __device__ inline void make_unit_vector();
-        __device__ Vec4& apply_sqrt() {
+        __host__ __device__
+        inline void make_unit_vector();
+
+        __device__
+        Vec4& apply_sqrt() {
             e.x = sqrt(e.x);
             e.y = sqrt(e.y);
             e.z = sqrt(e.z);
@@ -73,16 +121,6 @@ class Vec4 {
 };
 
 using Point3 = Vec4; // Alias for 3D point
-
-// Stream handling
-inline std::istream& operator>>(std::istream &is, Vec4 &t) {
-    is >> t.e.x >> t.e.y >> t.e.z;
-    return is;
-}
-
-inline std::ostream& operator<<(std::ostream &out, const Vec4 &v) {
-    return out << v.e.x << ' ' << v.e.y << ' ' << v.e.z;
-}
 
 __host__ __device__ inline void Vec4::make_unit_vector() {
     float k = rsqrtf(e.x*e.x + e.y*e.y + e.z*e.z);
@@ -203,4 +241,4 @@ __host__ __device__ inline Vec4 unit_vector(Vec4 v) {
     return Vec4(v.x() / length, v.y() / length, v.z() / length, v.w());
 }
 
-#endif // VEC4_H
+#endif // VEC4_CUH

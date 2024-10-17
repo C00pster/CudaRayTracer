@@ -1,8 +1,8 @@
-#ifndef SPHERE_H
-#define SPHERE_H
+#ifndef SPHERE_CUH
+#define SPHERE_CUH
 
-#include "primitives/primitive.h"
-#include "math/utils.h"
+#include "primitives/primitive.cuh"
+#include "math/utils.cuh"
 
 class Sphere : public Primitive {
     public:
@@ -80,4 +80,4 @@ class Sphere : public Primitive {
             }
 };
 
-#endif // SPHERE_H
+#endif // SPHERE_CUH

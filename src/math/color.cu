@@ -1,19 +1,11 @@
-#ifndef COLOR_H
-#define COLOR_H
+#include "color.cuh"
 
-#include "math/interval.h"
-#include "math/vec4.h"
-
-using Color = Vec4;
-
-inline float linear_to_gamma(float value) {
-    if (value > 0) {
-        return sqrt(value);
-    }
-    return 0;
-}
-
-void write_framebuffer_to_file(Color *framebuffer, int width, int height, const char *filename = "output.ppm") {
+void write_framebuffer_to_file(
+    Color *framebuffer, 
+    int width, 
+    int height, 
+    const char *filename
+) {
     std::ofstream file(filename, std::ios::out | std::ios::binary);
     if (!file) {
         std::cerr << "Error opening file: " << filename << std::endl;
@@ -33,5 +25,3 @@ void write_framebuffer_to_file(Color *framebuffer, int width, int height, const 
 
     file.close();
 }
-
-#endif // COLOR_H

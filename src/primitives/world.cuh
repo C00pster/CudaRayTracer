@@ -1,8 +1,8 @@
-#ifndef WORLD_H
-#define WORLD_H
+#ifndef WORLD_CUH
+#define WORLD_CUH
 
-#include "acceleration/bvh_node.h"
-#include "primitives/primitive.h"
+#include "acceleration/bvh_node.cuh"
+#include "primitives/primitive.cuh"
 #include <vector>
 #include <cstdint>
 
@@ -29,4 +29,4 @@ class World {
         size_t root_idx;
 };
 
-#endif // PRIMITIVE_LIST_H
+#endif // WORLD_CUH

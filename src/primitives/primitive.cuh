@@ -1,8 +1,8 @@
-#ifndef PRIMITIVE_H
-#define PRIMITIVE_H
+#ifndef PRIMITIVE_CUH
+#define PRIMITIVE_CUH
 
-#include "math/ray.h"
-#include "acceleration/aabb.h"
+#include "math/ray.cuh"
+#include "acceleration/aabb.cuh"
 
 class Material;
 
@@ -33,4 +33,4 @@ class Primitive {
         virtual Point3 get_centroid() const = 0;
 };
 
-#endif // PRIMITIVE_H
+#endif // PRIMITIVE_CUH

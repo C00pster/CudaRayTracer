@@ -1,7 +1,4 @@
-#ifndef CUDA_UTILS_H
-#define CUDA_UTILS_H
-
-#define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
+#include "cuda_utils.cuh"
 
 void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
     if (result) {
@@ -13,7 +10,8 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
     }
 }
 
-__global__ void rand_init(curandState *rand_state) {
+__global__
+void rand_init(curandState *rand_state) {
     if (threadIdx.x == 0 && blockIdx.x == 0)
         curand_init(1984, 0, 0, rand_state);
 }
@@ -39,5 +37,3 @@ int calculate_optimal_threads_per_block() {
 
     return optimalThreadsPerBlock;
 }
-
-#endif // CUDA_UTILS_H

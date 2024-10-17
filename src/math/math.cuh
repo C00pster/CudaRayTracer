@@ -1,9 +1,9 @@
-#ifndef MATH_H
-#define MATH_H
+#ifndef MATH_CUH
+#define MATH_CUH
 
-#include "vec4.h"
-#include "ray.h"
-#include "utils.h"
-#include "color.h"
+#include "vec4.cuh"
+#include "ray.cuh"
+#include "utils.cuh"
+#include "color.cuh"
 
-#endif // MATH_H
+#endif // MATH_CUH
