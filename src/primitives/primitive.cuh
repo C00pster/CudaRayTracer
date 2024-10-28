@@ -15,7 +15,7 @@ struct HitRecord {
     Material *mat_ptr;
     bool front_face;
 
-    __device__ void set_face_normal(const Ray &r, const Vec4 &outward_normal) {
+    __device__ inline void set_face_normal(const Ray &r, const Vec4 &outward_normal) {
         front_face = dot(r.direction(), outward_normal) < 0;
         normal = front_face ? outward_normal : -outward_normal;
     }
@@ -23,14 +23,8 @@ struct HitRecord {
 
 class Primitive {
     public:
-        __device__
-        virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const = 0;
-
-        __device__
-        virtual bool bounding_box(AABB& bbox) const = 0;
-
-        __device__
-        virtual Point3 get_centroid() const = 0;
+        __device__ virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const = 0;
+        __device__ virtual bool bounding_box(float t0, float t1, AABB& bbox) const = 0;
 };
 
 #endif // PRIMITIVE_CUH

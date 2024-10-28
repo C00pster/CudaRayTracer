@@ -5,127 +5,82 @@
 #include <iostream>
 
 class Vec4 {
-    public:
-        float4 e;
+public:
+    float4 e;
 
-        //Constructors
-        __host__ __device__
-        Vec4() { e = make_float4(0.0f, 0.0f, 0.0f, 0.0f); }
+    //Constructors
+    __host__ __device__ Vec4() { e = make_float4(0.0f, 0.0f, 0.0f, 0.0f); }
+    __host__ __device__ Vec4(float x, float y, float z, float w) { e = make_float4(x, y, z, w); }
+    __host__ __device__ Vec4(float x, float y, float z) { e = make_float4(x, y, z, 1.0f); }
+    __host__ __device__ Vec4(const float4 &v) : e(v) {}
 
-        __host__ __device__
-        Vec4(float x, float y, float z, float w) { e = make_float4(x, y, z, w); }
+    //Accessors
+    __host__ __device__ inline float x() const { return e.x; }
+    __host__ __device__ inline float y() const { return e.y; }
+    __host__ __device__ inline float z() const { return e.z; }
+    __host__ __device__ inline float w() const { return e.w; }
+    __host__ __device__ inline float r() const { return e.x; }
+    __host__ __device__ inline float g() const { return e.y; }
+    __host__ __device__ inline float b() const { return e.z; }
 
-        __host__ __device__
-        Vec4(float x, float y, float z) { e = make_float4(x, y, z, 1.0f); }
+    //Operators
+    __host__ __device__ inline const Vec4& operator+() const { return *this; }
+    __host__ __device__ inline Vec4 operator-() const { return Vec4(-e.x, -e.y, -e.z, e.w); } //w stays unchanged
+    __host__ __device__ inline Vec4& operator+=(const Vec4 &v2);
+    __host__ __device__ inline Vec4& operator-=(const Vec4 &v2);
+    __host__ __device__ inline Vec4& operator*=(const Vec4 &v2);
+    __host__ __device__ inline Vec4& operator/=(const Vec4 &v2);
+    __host__ __device__ inline Vec4& operator*=(const float t);
+    __host__ __device__ inline Vec4& operator/=(const float t);
 
-        __host__ __device__
-        Vec4(const float4 &v) : e(v) {}
+    // Careful, there is no catch for out of bounds access
+    __host__ __device__ inline float operator[](int i) const {
+        return i == 0 ? e.x
+                : i == 1 ? e.y
+                : i == 2 ? e.z
+                : e.w;
+    }
 
-        //Accessors
-        __host__ __device__ 
-        inline float x() const { return e.x; }
+    // Careful, there is no catch for out of bounds access
+    __host__ __device__ inline float& operator[](int i) {
+        return i == 0 ? e.x
+                : i == 1 ? e.y
+                : i == 2 ? e.z
+                : e.w;
+    }
 
-        __host__ __device__
-        inline float y() const { return e.y; }
+    friend std::istream& operator>>(std::istream &is, Vec4 &t) {
+        return is >> t.e.x >> t.e.y >> t.e.z;
+    }
 
-        __host__ __device__
-        inline float z() const { return e.z; }
+    friend std::ostream& operator<<(std::ostream &out, const Vec4 &v) {
+        return out << v.e.x << ' ' << v.e.y << ' ' << v.e.z;
+    }
 
-        __host__ __device__
-        inline float w() const { return e.w; }
+    // Magnitude
+    __host__ __device__ inline float length() const { return sqrtf(e.x*e.x + e.y*e.y + e.z*e.z); }
+    __host__ __device__ inline float squared_length() const { return e.x*e.x + e.y*e.y + e.z*e.z; }
 
-        __host__ __device__
-        inline float r() const { return e.x; }
+    // Normalize
+    __host__ __device__ inline void make_unit_vector() {
+        float k = rsqrtf(e.x*e.x + e.y*e.y + e.z*e.z);
+        e.x *= k; e.y *= k; e.z *= k;
+    }
 
-        __host__ __device__
-        inline float g() const { return e.y; }
+    __device__ Vec4& apply_sqrt() {
+        e.x = sqrt(e.x);
+        e.y = sqrt(e.y);
+        e.z = sqrt(e.z);
+        return *this;
+    }
 
-        __host__ __device__
-        inline float b() const { return e.z; }
-
-        //Operators
-        __host__ __device__ 
-        inline const Vec4& operator+() const { return *this; }
-
-        __host__ __device__ 
-        inline Vec4 operator-() const { return Vec4(-e.x, -e.y, -e.z, e.w); } //w stays unchanged
-
-        __host__ __device__
-        inline Vec4& operator+=(const Vec4 &v2);
-
-        __host__ __device__
-        inline Vec4& operator-=(const Vec4 &v2);
-
-        __host__ __device__
-        inline Vec4& operator*=(const Vec4 &v2);
-
-        __host__ __device__
-        inline Vec4& operator/=(const Vec4 &v2);
-
-        __host__ __device__
-        inline Vec4& operator*=(const float t);
-
-        __host__ __device__
-        inline Vec4& operator/=(const float t);
-
-
-        // Careful, there is no catch for out of bounds access
-        __host__ __device__
-        inline float operator[](int i) const {
-            return i == 0 ? e.x
-                 : i == 1 ? e.y
-                 : i == 2 ? e.z
-                 : e.w;
-        }
-
-        // Careful, there is no catch for out of bounds access
-        __host__ __device__
-        inline float& operator[](int i) {
-            return i == 0 ? e.x
-                 : i == 1 ? e.y
-                 : i == 2 ? e.z
-                 : e.w;
-        }
-
-        friend std::istream& operator>>(std::istream &is, Vec4 &t) {
-            return is >> t.e.x >> t.e.y >> t.e.z;
-        }
-
-        friend std::ostream& operator<<(std::ostream &out, const Vec4 &v) {
-            return out << v.e.x << ' ' << v.e.y << ' ' << v.e.z;
-        }
-
-        // Magnitude
-        __host__ __device__
-        inline float length() const { return sqrtf(e.x*e.x + e.y*e.y + e.z*e.z); }
-        __host__ __device__
-        inline float squared_length() const { return e.x*e.x + e.y*e.y + e.z*e.z; }
-
-        // Normalize
-        __host__ __device__
-        inline void make_unit_vector();
-
-        __device__
-        Vec4& apply_sqrt() {
-            e.x = sqrt(e.x);
-            e.y = sqrt(e.y);
-            e.z = sqrt(e.z);
-            return *this;
-        }
-
-        __host__ __device__
-        inline bool near_zero() const {
-            const float s = 1e-8;
-            return (fabs(e.x) < s) && (fabs(e.y) < s) && (fabs(e.z) < s);
-        }
+    __host__ __device__ inline bool near_zero() const {
+        const float s = 1e-8;
+        return (fabs(e.x) < s) && (fabs(e.y) < s) && (fabs(e.z) < s);
+    }
 };
 
 using Point3 = Vec4; // Alias for 3D point
-
-__host__ __device__ inline void Vec4::make_unit_vector() {
-    float k = rsqrtf(e.x*e.x + e.y*e.y + e.z*e.z);
-    e.x *= k; e.y *= k; e.z *= k;
-}
 
 // Overload operators
 __host__ __device__ inline Vec4 operator+(const Vec4 &v1, const Vec4 &v2) {
@@ -239,6 +194,30 @@ __host__ __device__ inline Vec4 cross(const Vec4 &v1, const Vec4 &v2) {
 __host__ __device__ inline Vec4 unit_vector(Vec4 v) {
     float length = sqrtf(v.x() * v.x() + v.y() * v.y() + v.z() * v.z());
     return Vec4(v.x() / length, v.y() / length, v.z() / length, v.w());
+}
+
+__host__ __device__ inline Vec4 reflect(const Vec4 &v, const Vec4 &n) {
+    return v - 2 * dot(v, n) * n;
+}
+__host__ __device__ inline bool refract(const Vec4 &v, const Vec4 &n, float ni_over_nt, Vec4 &refracted) {
+    Vec4 uv = unit_vector(v);
+    float dt = dot(uv, n);
+    float discriminant = 1.0f - ni_over_nt * ni_over_nt * (1.0f - dt * dt);
+    if (discriminant > 0) {
+        refracted = ni_over_nt * (uv - n * dt) - n * sqrtf(discriminant);
+        return true;
+    }
+    return false;
+}
+
+#define RANDVEC4 Vec4(curand_uniform(local_rand_state), curand_uniform(local_rand_state), curand_uniform(local_rand_state), 1.0f)
+
+__device__ Vec4 random_in_unit_sphere(curandState *local_rand_state) {
+    Vec4 p;
+    do {
+        p = 2.0f * RANDVEC4 - Vec4(1, 1, 1, 1);
+    } while (p.squared_length() >= 1.0f);
+    return p;
 }
 
 #endif // VEC4_CUH

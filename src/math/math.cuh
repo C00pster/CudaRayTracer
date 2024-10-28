@@ -4,6 +4,5 @@
 #include "vec4.cuh"
 #include "ray.cuh"
 #include "utils.cuh"
-#include "color.cuh"
 
 #endif // MATH_CUH

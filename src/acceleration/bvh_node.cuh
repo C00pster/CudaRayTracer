@@ -1,79 +1,91 @@
 #ifndef BVH_NODE_CUH
 #define BVH_NODE_CUH
 
-#include "aabb.cuh"
-#include "primitives/primitive.cuh"
-#include <cuda_runtime.h>
-#include <cmath>
+#include "math/ray.cuh"
+#include "primitives/primitive_list.cuh"
+
+enum Axis { X, Y, Z };
+
+__device__ void swap(Primitive*& a, Primitive*& b) {
+    Primitive* temp = a;
+    a = b;
+    b = temp;
+}
+
+template<Axis axis>
+__device__ void bubble_sort(Primitive** primitives, int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            AABB box_left, box_right;
+            Primitive *ah = primitives[j];
+            Primitive *bh = primitives[j + 1];
+
+            ah->bounding_box(0, 0, box_left);
+            bh->bounding_box(0, 0, box_right);
+
+            if ((axis == X && (box_left.min().x() - box_right.min().x()) < 0.0f) ||
+                (axis == Y && (box_left.min().y() - box_right.min().y()) < 0.0f) ||
+                (axis == Z && (box_left.min().z() - box_right.min().z()) < 0.0f)) {
+                swap(primitives[j], primitives[j + 1]);
+            }
+        }
+    }
+}
 
 class BVHNode : public Primitive {
-    public:
+public:
+    __device__ BVHNode() {}
+    __device__ BVHNode(Primitive **primitives, int n, float time0, float time1, curandState& local_rand_state) {
+        int axis = int(3 * curand_uniform(&local_rand_state));
 
-        __device__
-        BVHNode() {}
-
-        __device__
-        BVHNode(AABB* bounding_box, size_t left, size_t right, Primitive** w) {
-            bbox = *bounding_box;
-            left_idx = left;
-            right_idx = right;
-            world = w;
+        if (axis == 0) {
+            bubble_sort<X>(primitives, n);
+        } else if (axis == 1) {
+            bubble_sort<Y>(primitives, n);
+        } else {
+            bubble_sort<Z>(primitives, n);
         }
 
-        __device__
-        virtual bool hit(const Ray& r, float t_min, float t_max, HitRecord& rec) const override {
-            if (!bbox.hit(r, t_min, t_max)) return false;
-            bool hit_left = false;
-            bool hit_right = false;
-
-            if (left_idx != -1 && world[left_idx]->hit(r, t_min, t_max, rec)) {
-                hit_left = true;
-            }
-            if (right_idx != -1 && world[right_idx]->hit(r, t_min, hit_left ? rec.t : t_max, rec)) {
-                hit_right = true;
-            }
-            return hit_left || hit_right;
+        if (n == 1) {
+            left = right = primitives[0];
+        } else if (n == 2) {
+            left = primitives[0];
+            right = primitives[1];
+        } else {
+            left = new BVHNode(primitives, n / 2, time0, time1, local_rand_state);
+            right = new BVHNode(primitives + n / 2, n - n / 2, time0, time1, local_rand_state);
         }
 
-        __device__
-        virtual bool bounding_box(AABB& bounding_box) const override {
-            bounding_box = bbox;
+        AABB box_left, box_right;
+        bbox = surrounding_box(box_left, box_right);
+    }
+
+    __device__ virtual bool hit(const Ray& r, float t_min, float t_max, HitRecord& rec) const override {
+        if (!bbox.hit(r, t_min, t_max)) return false;
+        HitRecord left_rec, right_rec;
+        bool hit_left = left->hit(r, t_min, t_max, left_rec);
+        bool hit_right = right->hit(r, t_min, hit_left ? left_rec.t : t_max, right_rec);
+        if (hit_left && hit_right) {
+            rec = left_rec.t < right_rec.t ? left_rec : right_rec;
             return true;
-        }
+        } else if (hit_left) {
+            rec = left_rec;
+            return true;
+        } else if (hit_right) {
+            rec = right_rec;
+            return true;
+        } else return false;
+    }
 
-        __device__
-        virtual Point3 get_centroid() const override {
-            // This should never be called
-            return Point3();
-        }
+    __device__ virtual bool bounding_box(float t0, float t1, AABB& bounding_box) const override {
+        bounding_box = bbox;
+        return true;
+    }
 
-    private:
-        AABB bbox;
-        int left_idx;
-        int right_idx;
-        Primitive** world;
+private:
+    Primitive* left;
+    Primitive* right;
+    AABB bbox;
 };
-
-__device__
-int64_t morton_code(const Point3& p);
-
-__device__
-void radix_sort(
-    int64_t* morton_codes, 
-    Primitive** primitives, 
-    int64_t* sorted_codes, 
-    Primitive** sorted_primitives, 
-    size_t n
-);
-
-__device__
-void buildLBVH(
-    Primitive** primitives,
-    Primitive** sorted_primitives,
-    int64_t* morton_codes,
-    int64_t* sorted_morton_codes,
-    size_t n_initial_primitives,
-    size_t* root_idx
-);
 
 #endif // BVH_NODE_H
